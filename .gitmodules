@@ -1,0 +1,3 @@
+[submodule "USERS/users_submodule"]
+	path = USERS/users_submodule
+	url = https://github.com/ruziba3vich/users_submodule.git
