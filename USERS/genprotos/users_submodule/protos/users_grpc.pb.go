@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -35,14 +34,14 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersServiceClient interface {
-	RegisterUser(ctx context.Context, in *CreateUserReuest, opts ...grpc.CallOption) (*User, error)
+	RegisterUser(ctx context.Context, in *CreateUserReuest, opts ...grpc.CallOption) (*Response, error)
 	LoginUser(ctx context.Context, in *LoginRequest, opts ...grpc.CallOption) (*RegisterUserResponse, error)
 	GetById(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*User, error)
 	GetByUsername(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*User, error)
 	GetByEmail(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*User, error)
-	UpdateUser(ctx context.Context, in *UpdateUserReuqest, opts ...grpc.CallOption) (*User, error)
-	GetAllUsers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllUsersResponse, error)
-	DeleteUserById(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*User, error)
+	UpdateUser(ctx context.Context, in *UpdateUserReuqest, opts ...grpc.CallOption) (*Response, error)
+	GetAllUsers(ctx context.Context, in *GetAllUsersRequest, opts ...grpc.CallOption) (*GetAllUsersResponse, error)
+	DeleteUserById(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*Response, error)
 	GetUsersByAddress(ctx context.Context, in *GetUsersByAddressRequest, opts ...grpc.CallOption) (*GetAllUsersResponse, error)
 }
 
@@ -54,9 +53,9 @@ func NewUsersServiceClient(cc grpc.ClientConnInterface) UsersServiceClient {
 	return &usersServiceClient{cc}
 }
 
-func (c *usersServiceClient) RegisterUser(ctx context.Context, in *CreateUserReuest, opts ...grpc.CallOption) (*User, error) {
+func (c *usersServiceClient) RegisterUser(ctx context.Context, in *CreateUserReuest, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(User)
+	out := new(Response)
 	err := c.cc.Invoke(ctx, UsersService_RegisterUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -104,9 +103,9 @@ func (c *usersServiceClient) GetByEmail(ctx context.Context, in *GetByFieldReque
 	return out, nil
 }
 
-func (c *usersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserReuqest, opts ...grpc.CallOption) (*User, error) {
+func (c *usersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserReuqest, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(User)
+	out := new(Response)
 	err := c.cc.Invoke(ctx, UsersService_UpdateUser_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -114,7 +113,7 @@ func (c *usersServiceClient) UpdateUser(ctx context.Context, in *UpdateUserReuqe
 	return out, nil
 }
 
-func (c *usersServiceClient) GetAllUsers(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetAllUsersResponse, error) {
+func (c *usersServiceClient) GetAllUsers(ctx context.Context, in *GetAllUsersRequest, opts ...grpc.CallOption) (*GetAllUsersResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetAllUsersResponse)
 	err := c.cc.Invoke(ctx, UsersService_GetAllUsers_FullMethodName, in, out, cOpts...)
@@ -124,9 +123,9 @@ func (c *usersServiceClient) GetAllUsers(ctx context.Context, in *emptypb.Empty,
 	return out, nil
 }
 
-func (c *usersServiceClient) DeleteUserById(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*User, error) {
+func (c *usersServiceClient) DeleteUserById(ctx context.Context, in *GetByFieldRequest, opts ...grpc.CallOption) (*Response, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(User)
+	out := new(Response)
 	err := c.cc.Invoke(ctx, UsersService_DeleteUserById_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -148,14 +147,14 @@ func (c *usersServiceClient) GetUsersByAddress(ctx context.Context, in *GetUsers
 // All implementations must embed UnimplementedUsersServiceServer
 // for forward compatibility
 type UsersServiceServer interface {
-	RegisterUser(context.Context, *CreateUserReuest) (*User, error)
+	RegisterUser(context.Context, *CreateUserReuest) (*Response, error)
 	LoginUser(context.Context, *LoginRequest) (*RegisterUserResponse, error)
 	GetById(context.Context, *GetByFieldRequest) (*User, error)
 	GetByUsername(context.Context, *GetByFieldRequest) (*User, error)
 	GetByEmail(context.Context, *GetByFieldRequest) (*User, error)
-	UpdateUser(context.Context, *UpdateUserReuqest) (*User, error)
-	GetAllUsers(context.Context, *emptypb.Empty) (*GetAllUsersResponse, error)
-	DeleteUserById(context.Context, *GetByFieldRequest) (*User, error)
+	UpdateUser(context.Context, *UpdateUserReuqest) (*Response, error)
+	GetAllUsers(context.Context, *GetAllUsersRequest) (*GetAllUsersResponse, error)
+	DeleteUserById(context.Context, *GetByFieldRequest) (*Response, error)
 	GetUsersByAddress(context.Context, *GetUsersByAddressRequest) (*GetAllUsersResponse, error)
 	mustEmbedUnimplementedUsersServiceServer()
 }
@@ -164,7 +163,7 @@ type UsersServiceServer interface {
 type UnimplementedUsersServiceServer struct {
 }
 
-func (UnimplementedUsersServiceServer) RegisterUser(context.Context, *CreateUserReuest) (*User, error) {
+func (UnimplementedUsersServiceServer) RegisterUser(context.Context, *CreateUserReuest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method RegisterUser not implemented")
 }
 func (UnimplementedUsersServiceServer) LoginUser(context.Context, *LoginRequest) (*RegisterUserResponse, error) {
@@ -179,13 +178,13 @@ func (UnimplementedUsersServiceServer) GetByUsername(context.Context, *GetByFiel
 func (UnimplementedUsersServiceServer) GetByEmail(context.Context, *GetByFieldRequest) (*User, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetByEmail not implemented")
 }
-func (UnimplementedUsersServiceServer) UpdateUser(context.Context, *UpdateUserReuqest) (*User, error) {
+func (UnimplementedUsersServiceServer) UpdateUser(context.Context, *UpdateUserReuqest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method UpdateUser not implemented")
 }
-func (UnimplementedUsersServiceServer) GetAllUsers(context.Context, *emptypb.Empty) (*GetAllUsersResponse, error) {
+func (UnimplementedUsersServiceServer) GetAllUsers(context.Context, *GetAllUsersRequest) (*GetAllUsersResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetAllUsers not implemented")
 }
-func (UnimplementedUsersServiceServer) DeleteUserById(context.Context, *GetByFieldRequest) (*User, error) {
+func (UnimplementedUsersServiceServer) DeleteUserById(context.Context, *GetByFieldRequest) (*Response, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteUserById not implemented")
 }
 func (UnimplementedUsersServiceServer) GetUsersByAddress(context.Context, *GetUsersByAddressRequest) (*GetAllUsersResponse, error) {
@@ -313,7 +312,7 @@ func _UsersService_UpdateUser_Handler(srv interface{}, ctx context.Context, dec 
 }
 
 func _UsersService_GetAllUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(emptypb.Empty)
+	in := new(GetAllUsersRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
@@ -325,7 +324,7 @@ func _UsersService_GetAllUsers_Handler(srv interface{}, ctx context.Context, dec
 		FullMethod: UsersService_GetAllUsers_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(UsersServiceServer).GetAllUsers(ctx, req.(*emptypb.Empty))
+		return srv.(UsersServiceServer).GetAllUsers(ctx, req.(*GetAllUsersRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }

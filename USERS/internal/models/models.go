@@ -5,6 +5,12 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+const (
+	POST   Method = "POST"
+	UPDATE Method = "UPDATE"
+	DELETE Method = "DELETE"
+)
+
 type (
 	User struct {
 		Id       primitive.ObjectID `bson:"_id"`
@@ -13,7 +19,10 @@ type (
 		Password string             `bson:"password"`
 		Profile  Profile            `bson:"profile"`
 		Deleted  bool               `bson:"deleted"`
+		// Method   Method
 	}
+
+	Method string
 
 	Profile struct {
 		Name    string `bson:"name"`
@@ -67,4 +76,14 @@ func (u *User) FromProto(data *genprotos.CreateUserReuest) {
 	u.Username = data.Username
 	u.Deleted = data.Deleted
 	u.Profile.FromProto(data.Profile)
+}
+
+func (u *User) ToCreateUserRequest() *genprotos.CreateUserReuest {
+	return &genprotos.CreateUserReuest{
+		Username: u.Username,
+		Email:    u.Email,
+		Password: u.Password,
+		Profile:  u.Profile.ToProtoProfile(),
+		Deleted:  u.Deleted,
+	}
 }

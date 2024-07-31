@@ -14,6 +14,22 @@ import (
 
 // / method to insert a new user into collection
 func (s *Storage) CreateUser(ctx context.Context, req *genprotos.CreateUserReuest) (*genprotos.User, error) {
+	var count int
+	someReq := &genprotos.GetByFieldRequest{
+		GetByField: req.Email,
+	}
+	eUser, _ := s.GetUserByEmail(ctx, someReq)
+	if eUser == nil {
+		count++
+	} else {
+		return nil, fmt.Errorf("user with this email already exists")
+	}
+	eUser, _ = s.GetUserByUsername(ctx, someReq)
+	if eUser == nil {
+		count++
+	} else {
+		return nil, fmt.Errorf("user with this email already exists")
+	}
 	var user models.User
 	user.Id = primitive.NewObjectID()
 	user.FromProto(req)
@@ -85,6 +101,19 @@ func (s *Storage) getByField(ctx context.Context, req *models.GetByFieldRequest)
 	}
 
 	return &user, nil
+}
+
+// / method to get user by username
+func (s *Storage) GetUserByUsername(ctx context.Context, req *genprotos.GetByFieldRequest) (*genprotos.User, error) {
+	request := models.GetByFieldRequest{
+		Field: "username",
+		Value: req.GetByField,
+	}
+	user, err := s.getByField(ctx, &request)
+	if err != nil {
+		return nil, err
+	}
+	return user.ToProtoUser(), nil
 }
 
 // / method to get user by id
@@ -177,11 +206,11 @@ func (s *Storage) GetAllUsers(ctx context.Context, req *genprotos.GetAllUsersReq
 }
 
 // / method to delete a user by id
-func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldRequest) (*genprotos.User, error) {
+func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldRequest) error {
 	objectID, err := primitive.ObjectIDFromHex(req.GetByField)
 	if err != nil {
 		s.logger.Printf("Invalid ObjectID: %s\n", req.GetByField)
-		return nil, fmt.Errorf("invalid ObjectID: %s", req.GetByField)
+		return fmt.Errorf("invalid ObjectID: %s", req.GetByField)
 	}
 
 	filter := bson.M{"_id": objectID}
@@ -191,10 +220,10 @@ func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldR
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
 			s.logger.Printf("No document found with ID: %s\n", req.GetByField)
-			return nil, fmt.Errorf("no document found with ID: %s", req.GetByField)
+			return fmt.Errorf("no document found with ID: %s", req.GetByField)
 		}
 		s.logger.Printf("Failed to find user: %s", err.Error())
-		return nil, fmt.Errorf("failed to find user: %s", err.Error())
+		return fmt.Errorf("failed to find user: %s", err.Error())
 	}
 
 	update := bson.M{
@@ -205,13 +234,13 @@ func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldR
 	_, err = s.database.UsersCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		s.logger.Printf("Failed to update user: %s", err.Error())
-		return nil, fmt.Errorf("failed to update user: %s", err.Error())
+		return fmt.Errorf("failed to update user: %s", err.Error())
 	}
 
 	user.Deleted = true
 
 	s.logger.Printf("Successfully marked user as deleted with ID: %s\n", req.GetByField)
-	return user.ToProtoUser(), nil
+	return nil
 }
 
 // / method for logging in a user

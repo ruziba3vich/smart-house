@@ -16,9 +16,12 @@ type DbConfig struct {
 
 // Config holds the application configuration
 type Config struct {
-	DbConfig  DbConfig
-	Port      string
-	secretKey string
+	DbConfig    DbConfig
+	Port        string
+	Protocol    string
+	secretKey   string
+	redisUri    string
+	rabbitMqUri string
 }
 
 // LoadConfig reads configuration from environment variables or .env file
@@ -33,8 +36,11 @@ func LoadConfig() (*Config, error) {
 			MongoDB:    getEnv("MONGO_DB", "test"),
 			Collection: getEnv("MONGO_COLLECTION", "users"),
 		},
-		Port:      getEnv("PORT", "8080"),
-		secretKey: getEnv("SECRET_KEY", "prodonik"),
+		Port:        getEnv("PORT", "8080"),
+		Protocol:    getEnv("PROTOCOL", "tcp"),
+		secretKey:   getEnv("SECRET_KEY", "prodonik"),
+		redisUri:    getEnv("REDIS_URI", "redis:6379"),
+		rabbitMqUri: getEnv("RABBITMQ_URI", "amqp://rabbitmq:5672"),
 	}, nil
 }
 
@@ -48,4 +54,12 @@ func getEnv(key, fallback string) string {
 
 func (c *Config) GetSecretKey() string {
 	return c.secretKey
+}
+
+func (c *Config) GetRedisURI() string {
+	return c.redisUri
+}
+
+func (c *Config) GetRabbitMqURI() string {
+	return c.rabbitMqUri
 }
