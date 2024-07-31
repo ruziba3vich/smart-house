@@ -268,3 +268,4 @@ func (s *Storage) LoginUser(ctx context.Context, req *genprotos.LoginRequest) (*
 	}
 	return nil, fmt.Errorf("missmatch in password")
 }
+

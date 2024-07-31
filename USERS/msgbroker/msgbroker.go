@@ -145,7 +145,7 @@ func (m *MsgBroker) StartToConsume(ctx context.Context, contentType string) {
 	}()
 
 	/// deletes consumer
-	
+
 	go func() {
 		defer m.wg.Done()
 		for {
