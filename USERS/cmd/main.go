@@ -25,7 +25,7 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*10)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
 	defer cancel()
 
 	db, err := storage.ConnectDB(cfg, ctx)

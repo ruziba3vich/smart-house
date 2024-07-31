@@ -24,6 +24,7 @@ func (s *Storage) CreateUser(ctx context.Context, req *genprotos.CreateUserReues
 	} else {
 		return nil, fmt.Errorf("user with this email already exists")
 	}
+	someReq.GetByField = req.Username
 	eUser, _ = s.GetUserByUsername(ctx, someReq)
 	if eUser == nil {
 		count++

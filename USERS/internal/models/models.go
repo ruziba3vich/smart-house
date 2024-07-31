@@ -42,8 +42,11 @@ func (u *User) Update(obj *genprotos.UpdateUserReuqest) {
 	if len(obj.User.Username) > 0 {
 		u.Username = obj.User.Username
 	}
-	if obj.User.Profile != nil {
-		u.Profile.FromProto(obj.User.Profile)
+	if len(obj.User.Profile.Name) > 0 {
+		u.Profile.Name = obj.User.Profile.Name
+	}
+	if len(obj.User.Profile.Address) > 0 {
+		u.Profile.Address = obj.User.Profile.Address
 	}
 }
 
