@@ -13,3 +13,6 @@
 [submodule "GATEWAY/devices_submodule"]
 	path = GATEWAY/devices_submodule
 	url = https://github.com/ruziba3vich/devices_submodule.git
+[submodule "CONTROL/controller_submodule"]
+	path = CONTROL/controller_submodule
+	url = https://github.com/ruziba3vich/controller_submodule.git

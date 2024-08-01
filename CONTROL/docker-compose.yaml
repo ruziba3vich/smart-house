@@ -1,0 +1,25 @@
+version: '3.8'
+
+services:
+  your-service:
+    image: your-service-name
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - DB_URI=mongodb://mongodb:27017
+    depends_on:
+      - rabbitmq
+      - mongodb
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  mongodb:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
