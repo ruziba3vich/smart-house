@@ -3,7 +3,6 @@ package msgbroker
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -54,9 +53,9 @@ func (m *MsgBroker) StartToConsume(ctx context.Context, contentType string) {
 	consumerCtx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	go m.consumeMessages(consumerCtx, m.registrations, m.service.RegisterUser, "registration", contentType)
-	go m.consumeMessages(consumerCtx, m.profileUpdates, m.service.UpdateUser, "update", contentType)
-	go m.consumeMessages(consumerCtx, m.profileDeletions, m.service.DeleteUserById, "deletion", contentType)
+	go m.consumeMessages(consumerCtx, m.registrations, m.service.RegisterUser, "registration")
+	go m.consumeMessages(consumerCtx, m.profileUpdates, m.service.UpdateUser, "update")
+	go m.consumeMessages(consumerCtx, m.profileDeletions, m.service.DeleteUserById, "deletion")
 
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
@@ -68,7 +67,7 @@ func (m *MsgBroker) StartToConsume(ctx context.Context, contentType string) {
 	m.logger.Println("All consumers have stopped")
 }
 
-func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.Delivery, serviceFunc interface{}, logPrefix string, contentType string) {
+func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.Delivery, serviceFunc interface{}, logPrefix string) {
 	defer m.wg.Done()
 	for {
 		select {
@@ -83,7 +82,7 @@ func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.De
 				if err := json.Unmarshal(val.Body, &req); err != nil {
 					m.logger.Printf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())
 					val.Nack(false, false)
-					m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())))
+					// m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())))
 					continue
 				}
 				request = req.ToCreateUserRequest()
@@ -93,7 +92,7 @@ func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.De
 				if err := json.Unmarshal(val.Body, &req); err != nil {
 					m.logger.Printf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())
 					val.Nack(false, false)
-					m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())))
+					// m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())))
 					continue
 				}
 				request = req.ToUpdateUserRequest()
@@ -103,7 +102,7 @@ func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.De
 				if err := json.Unmarshal(val.Body, &req); err != nil {
 					m.logger.Printf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())
 					val.Nack(false, false)
-					m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())))
+					// m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("ERROR WHILE UNMARSHALING DATA: %s\n", err.Error())))
 					continue
 				}
 				request = &genprotos.GetByFieldRequest{GetByField: req.UserId}
@@ -113,19 +112,19 @@ func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.De
 			if err != nil {
 				m.logger.Printf("Failed in %s: %s\n", logPrefix, err.Error())
 				val.Nack(false, false)
-				m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("Failed in %s: %s\n", logPrefix, err.Error())))
+				// m.publishMessageBack(val, contentType, []byte(fmt.Sprintf("Failed in %s: %s\n", logPrefix, err.Error())))
 				continue
 			}
 
 			val.Ack(false)
 
-			byteData, err := proto.Marshal(response)
+			_, err = proto.Marshal(response)
 			if err != nil {
 				m.logger.Printf("Failed to marshal response: %s\n", err.Error())
 				continue
 			}
 
-			m.publishMessageBack(val, contentType, byteData)
+			// m.publishMessageBack(val, contentType, byteData)
 		case <-ctx.Done():
 			m.logger.Printf("Context done, stopping %s consumer", logPrefix)
 			return
@@ -133,22 +132,22 @@ func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.De
 	}
 }
 
-func (m *MsgBroker) publishMessageBack(val amqp.Delivery, contentType string, byteData []byte) {
-	m.logger.Printf("Publishing message with CorrelationId: %s", val.CorrelationId)
-	err := m.channel.Publish(
-		"",
-		val.ReplyTo,
-		false,
-		false,
-		amqp.Publishing{
-			ContentType:   contentType,
-			CorrelationId: val.CorrelationId,
-			Body:          byteData,
-		},
-	)
-	if err != nil {
-		m.logger.Printf("Failed to publish message to %s: %s\n", val.ReplyTo, err.Error())
-	} else {
-		m.logger.Println("Message successfully published back")
-	}
-}
+// func (m *MsgBroker) publishMessageBack(val amqp.Delivery, contentType string, byteData []byte) {
+// 	m.logger.Printf("Publishing message with CorrelationId: %s", val.CorrelationId)
+// 	err := m.channel.Publish(
+// 		"",
+// 		val.ReplyTo,
+// 		false,
+// 		false,
+// 		amqp.Publishing{
+// 			ContentType:   contentType,
+// 			CorrelationId: val.CorrelationId,
+// 			Body:          byteData,
+// 		},
+// 	)
+// 	if err != nil {
+// 		m.logger.Printf("Failed to publish message to %s: %s\n", val.ReplyTo, err.Error())
+// 	} else {
+// 		m.logger.Println("Message successfully published back")
+// 	}
+// }
