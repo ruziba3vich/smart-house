@@ -12,53 +12,51 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-// / method to insert a new user into collection
+// CreateUser inserts a new user into the collection
 func (s *Storage) CreateUser(ctx context.Context, req *genprotos.CreateUserReuest) (*genprotos.User, error) {
-	var count int
-	someReq := &genprotos.GetByFieldRequest{
-		GetByField: req.Email,
-	}
-	eUser, _ := s.GetUserByEmail(ctx, someReq)
-	if eUser == nil {
-		count++
-	} else {
-		return nil, fmt.Errorf("user with this email already exists")
-	}
-	someReq.GetByField = req.Username
-	eUser, _ = s.GetUserByUsername(ctx, someReq)
-	if eUser == nil {
-		count++
-	} else {
-		return nil, fmt.Errorf("user with this email already exists")
-	}
 	var user models.User
 	user.Id = primitive.NewObjectID()
 	user.FromProto(req)
 	user.Password = s.passwordHasher.HashPassword(user.Password)
+	s.logger.Println(user.Password, "-------------------------------------")
+
+	select {
+	case <-ctx.Done():
+		s.logger.Println("context cancelled or expired")
+		return nil, ctx.Err()
+	default:
+	}
+
 	_, err := s.database.UsersCollection.InsertOne(ctx, user)
 	if err != nil {
 		s.logger.Printf("Failed to insert user: %s\n", err.Error())
-		return nil, err
+		return nil, fmt.Errorf("failed to insert user: %s", err.Error())
 	}
+	s.logger.Printf("--------------------- USER HAS BEEN CREATED WITH EMAil %s -----------------------\n", user.Email)
 	return user.ToProtoUser(), nil
 }
 
-// / method to update a user
+// UpdateUser updates an existing user
 func (s *Storage) UpdateUser(ctx context.Context, req *genprotos.UpdateUserReuqest) (*genprotos.User, error) {
+	if req.User == nil || req.User.UserId == "" {
+		return nil, fmt.Errorf("invalid update request: user or user ID is missing")
+	}
+
 	user, err := s.getByField(ctx, &models.GetByFieldRequest{
 		Field: "_id",
 		Value: req.User.UserId,
 	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get user: %s", err.Error())
 	}
+
 	user.Update(req)
 	objectId, err := primitive.ObjectIDFromHex(req.User.UserId)
 	if err != nil {
-		s.logger.Println("FAILED TO CONVERT THE OBJECT ID", err.Error())
-		return nil, err
+		s.logger.Println("failed to convert the object ID:", err.Error())
+		return nil, fmt.Errorf("invalid ObjectID: %s", err.Error())
 	}
-	filter := bson.M{"_id": objectId}
+	filter := bson.M{"_id": objectId, "deleted": false}
 
 	update := bson.M{
 		"$set": user,
@@ -67,15 +65,16 @@ func (s *Storage) UpdateUser(ctx context.Context, req *genprotos.UpdateUserReuqe
 	updateResult, err := s.database.UsersCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
 		s.logger.Printf("Failed to update document: %s", err.Error())
-		return nil, err
+		return nil, fmt.Errorf("failed to update user: %s", err.Error())
 	}
 	if updateResult.ModifiedCount == 0 {
-		s.logger.Println("NO ROWS BEEN UPDATED")
+		s.logger.Println("no rows updated")
+		return nil, fmt.Errorf("no user found to update with ID: %s", req.User.UserId)
 	}
 	return user.ToProtoUser(), nil
 }
 
-// / method to update a field by given request
+// getByField finds a user by a specific field
 func (s *Storage) getByField(ctx context.Context, req *models.GetByFieldRequest) (*models.User, error) {
 	var user models.User
 	var filter bson.M
@@ -83,28 +82,35 @@ func (s *Storage) getByField(ctx context.Context, req *models.GetByFieldRequest)
 	if req.Field == "_id" {
 		objectID, err := primitive.ObjectIDFromHex(req.Value)
 		if err != nil {
-			s.logger.Printf("invalid ObjectID: %s\n", req.Value)
+			s.logger.Printf("Invalid ObjectID: %s\n", req.Value)
 			return nil, fmt.Errorf("invalid ObjectID: %s", req.Value)
 		}
-		filter = bson.M{"_id": objectID}
+		filter = bson.M{"_id": objectID, "deleted": false}
 	} else {
-		filter = bson.M{req.Field: req.Value}
+		filter = bson.M{req.Field: req.Value, "deleted": false}
+	}
+
+	select {
+	case <-ctx.Done():
+		s.logger.Println("context canceled or expired")
+		return nil, ctx.Err()
+	default:
 	}
 
 	err := s.database.UsersCollection.FindOne(ctx, filter).Decode(&user)
 	if err != nil {
 		if err == mongo.ErrNoDocuments {
-			s.logger.Printf("no document found with %s: %s\n", req.Field, req.Value)
+			s.logger.Printf("No document found with %s: %s\n", req.Field, req.Value)
 			return nil, fmt.Errorf("no document found with %s: %s", req.Field, req.Value)
 		}
-		s.logger.Printf("failed to find document: %s", err.Error())
+		s.logger.Printf("Failed to find document: %s", err.Error())
 		return nil, fmt.Errorf("failed to find document: %s", err.Error())
 	}
 
 	return &user, nil
 }
 
-// / method to get user by username
+// GetUserByUsername gets a user by username
 func (s *Storage) GetUserByUsername(ctx context.Context, req *genprotos.GetByFieldRequest) (*genprotos.User, error) {
 	request := models.GetByFieldRequest{
 		Field: "username",
@@ -117,7 +123,7 @@ func (s *Storage) GetUserByUsername(ctx context.Context, req *genprotos.GetByFie
 	return user.ToProtoUser(), nil
 }
 
-// / method to get user by id
+// GetUserById gets a user by ID
 func (s *Storage) GetUserById(ctx context.Context, req *genprotos.GetByFieldRequest) (*genprotos.User, error) {
 	request := models.GetByFieldRequest{
 		Field: "_id",
@@ -130,7 +136,7 @@ func (s *Storage) GetUserById(ctx context.Context, req *genprotos.GetByFieldRequ
 	return user.ToProtoUser(), nil
 }
 
-// / method to get user by email
+// GetUserByEmail gets a user by email
 func (s *Storage) GetUserByEmail(ctx context.Context, req *genprotos.GetByFieldRequest) (*genprotos.User, error) {
 	request := models.GetByFieldRequest{
 		Field: "email",
@@ -143,9 +149,9 @@ func (s *Storage) GetUserByEmail(ctx context.Context, req *genprotos.GetByFieldR
 	return user.ToProtoUser(), nil
 }
 
-// / method to get all users by a spesific address
+// GetUserByAddress gets users by a specific address
 func (s *Storage) GetUserByAddress(ctx context.Context, req *genprotos.GetUsersByAddressRequest) (*genprotos.GetAllUsersResponse, error) {
-	filter := bson.M{"profile.address": req.Address}
+	filter := bson.M{"profile.address": req.Address, "deleted": false}
 
 	cursor, err := s.database.UsersCollection.Find(ctx, filter)
 	if err != nil {
@@ -173,7 +179,7 @@ func (s *Storage) GetUserByAddress(ctx context.Context, req *genprotos.GetUsersB
 	return &response, nil
 }
 
-// / method to get all users
+// GetAllUsers gets all users with pagination
 func (s *Storage) GetAllUsers(ctx context.Context, req *genprotos.GetAllUsersRequest) (*genprotos.GetAllUsersResponse, error) {
 	skip := (req.Pagination - 1) * req.Limit
 
@@ -181,7 +187,9 @@ func (s *Storage) GetAllUsers(ctx context.Context, req *genprotos.GetAllUsersReq
 	findOptions.SetLimit(int64(req.Limit))
 	findOptions.SetSkip(int64(skip))
 
-	cursor, err := s.database.UsersCollection.Find(ctx, bson.M{}, findOptions)
+	filter := bson.M{"deleted": false}
+
+	cursor, err := s.database.UsersCollection.Find(ctx, filter, findOptions)
 	if err != nil {
 		s.logger.Printf("FAILED TO FIND USERS: %s", err.Error())
 		return nil, fmt.Errorf("failed to find users: %s", err.Error())
@@ -206,7 +214,7 @@ func (s *Storage) GetAllUsers(ctx context.Context, req *genprotos.GetAllUsersReq
 	return &response, nil
 }
 
-// / method to delete a user by id
+// DeleteUserById marks a user as deleted by ID
 func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldRequest) error {
 	objectID, err := primitive.ObjectIDFromHex(req.GetByField)
 	if err != nil {
@@ -228,9 +236,7 @@ func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldR
 	}
 
 	update := bson.M{
-		"$set": bson.M{
-			"deleted": true,
-		},
+		"deleted": true,
 	}
 	_, err = s.database.UsersCollection.UpdateOne(ctx, filter, update)
 	if err != nil {
@@ -244,7 +250,7 @@ func (s *Storage) DeleteUserById(ctx context.Context, req *genprotos.GetByFieldR
 	return nil
 }
 
-// / method for logging in a user
+// LoginUser authenticates a user and returns a token
 func (s *Storage) LoginUser(ctx context.Context, req *genprotos.LoginRequest) (*genprotos.RegisterUserResponse, error) {
 	user, err := s.GetUserByEmail(ctx, &genprotos.GetByFieldRequest{
 		GetByField: req.Email,
@@ -252,8 +258,8 @@ func (s *Storage) LoginUser(ctx context.Context, req *genprotos.LoginRequest) (*
 	if err != nil {
 		return nil, err
 	}
-	hashedPassword := s.passwordHasher.HashPassword(req.Password)
-	if user.Password == hashedPassword {
+	s.logger.Println("----------------------- user found -----------------------------")
+	if s.passwordHasher.CheckPasswordHash(req.Password, user.Password) {
 		token, err := s.tokenGenerator.GenerateToken(user.UserId, user.Username)
 		if err != nil {
 			s.logger.Printf("ERROR WHILE GENERATING TOKEN FOR USER %s\n", user.Email)
@@ -266,6 +272,5 @@ func (s *Storage) LoginUser(ctx context.Context, req *genprotos.LoginRequest) (*
 			},
 		}, nil
 	}
-	return nil, fmt.Errorf("missmatch in password")
+	return nil, fmt.Errorf("mismatch in password")
 }
-

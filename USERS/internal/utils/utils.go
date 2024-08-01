@@ -1,42 +1,30 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-	"hash"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
 	"github.com/ruziba3vich/users/internal/config"
 )
 
-type PasswordHasher struct {
-	hash hash.Hash
-}
-
-// / HashPassword hashes a password using SHA-256
-func (p *PasswordHasher) HashPassword(password string) string {
-	p.hash.Write([]byte(password))
-	return hex.EncodeToString(p.hash.Sum(nil))
-}
-
-func NewPasswordHasher(hash hash.Hash) *PasswordHasher {
-	return &PasswordHasher{
-		hash: hash,
+type (
+	TokenGenerator struct {
+		secretKey string
 	}
-}
+	PasswordHasher struct{}
+)
 
-type TokenGenerator struct {
-	secretKey string
-}
-
+// NewTokenGenerator creates a new TokenGenerator
 func NewTokenGenerator(cfg *config.Config) *TokenGenerator {
 	return &TokenGenerator{
 		secretKey: cfg.GetSecretKey(),
 	}
 }
 
-// / method to generate a new token
+// GenerateToken generates a JWT token for a user
 func (t *TokenGenerator) GenerateToken(userId string, username string) (string, error) {
 	claims := jwt.MapClaims{
 		"sub":      userId,
@@ -51,4 +39,21 @@ func (t *TokenGenerator) GenerateToken(userId string, username string) (string, 
 	}
 
 	return tokenString, nil
+}
+
+// HashPassword hashes a password using SHA-256
+func (p *PasswordHasher) HashPassword(password string) string {
+	hasher := sha256.New()
+	hasher.Write([]byte(password))
+	return hex.EncodeToString(hasher.Sum(nil))
+}
+
+// CheckPasswordHash compares a plain password with its hash
+func (p *PasswordHasher) CheckPasswordHash(password, hash string) bool {
+	return p.HashPassword(password) == hash
+}
+
+// NewPasswordHasher creates a new PasswordHasher
+func NewPasswordHasher() *PasswordHasher {
+	return &PasswordHasher{}
 }

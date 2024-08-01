@@ -29,7 +29,7 @@ func NewStorage(database *DB, logger *log.Logger, hash hash.Hash, cfg *config.Co
 	return &Storage{
 		database:       database,
 		logger:         logger,
-		passwordHasher: utils.NewPasswordHasher(hash),
+		passwordHasher: utils.NewPasswordHasher(),
 		tokenGenerator: utils.NewTokenGenerator(cfg),
 	}
 }

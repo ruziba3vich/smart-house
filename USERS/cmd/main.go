@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"crypto/md5"
+	"crypto/sha256"
 	"log"
 	"os"
 	"sync"
@@ -33,7 +33,7 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	hash := md5.New()
+	hash := sha256.New()
 
 	redisService := redisservice.New(redis.NewClient(&redis.Options{
 		Addr: cfg.GetRedisURI(),

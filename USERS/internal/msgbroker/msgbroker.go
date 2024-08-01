@@ -131,23 +131,3 @@ func (m *MsgBroker) consumeMessages(ctx context.Context, messages <-chan amqp.De
 		}
 	}
 }
-
-// func (m *MsgBroker) publishMessageBack(val amqp.Delivery, contentType string, byteData []byte) {
-// 	m.logger.Printf("Publishing message with CorrelationId: %s", val.CorrelationId)
-// 	err := m.channel.Publish(
-// 		"",
-// 		val.ReplyTo,
-// 		false,
-// 		false,
-// 		amqp.Publishing{
-// 			ContentType:   contentType,
-// 			CorrelationId: val.CorrelationId,
-// 			Body:          byteData,
-// 		},
-// 	)
-// 	if err != nil {
-// 		m.logger.Printf("Failed to publish message to %s: %s\n", val.ReplyTo, err.Error())
-// 	} else {
-// 		m.logger.Println("Message successfully published back")
-// 	}
-// }

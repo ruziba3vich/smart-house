@@ -29,6 +29,14 @@ type (
 	DeleteUserRequest struct {
 		UserId string `json:"user_id"`
 	}
+
+	ErrorResponse struct {
+		Error string `json:"message"`
+	}
+
+	UserResponse struct {
+		Response interface{} `json:"response"`
+	}
 )
 
 func (u *User) Update(obj *usersprotos.UpdateUserReuqest) {
@@ -84,5 +92,17 @@ func (u *User) ToCreateUserRequest() *usersprotos.CreateUserReuest {
 		Password: u.Password,
 		Profile:  u.Profile.ToProtoProfile(),
 		Deleted:  u.Deleted,
+	}
+}
+
+func (u *User) FromProtoUser(user *usersprotos.User) {
+	u.Id, _ = primitive.ObjectIDFromHex(user.UserId)
+	u.Username = user.Username
+	u.Email = user.Email
+	u.Password = user.Password
+	u.Deleted = user.Deleted
+	u.Profile = Profile{
+		Name:    user.Profile.Name,
+		Address: user.Profile.Address,
 	}
 }
