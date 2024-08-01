@@ -39,6 +39,25 @@ services:
       - redis
       - rabbitmq
 
+  control:
+    build:
+      context: .
+      dockerfile: dockerfile.control
+    ports:
+      - "7002:7002"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_DB=control_db
+      - COLLECTION=control
+      - PORT=7002
+      - REDIS_URI=redis:6379
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - PROTOCOL=tcp
+    depends_on:
+      - mongo
+      - redis
+      - rabbitmq
+
   mongo:
     image: mongo:latest
     ports:

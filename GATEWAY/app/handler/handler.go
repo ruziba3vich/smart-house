@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/k0kubun/pp"
 	amqp "github.com/rabbitmq/amqp091-go"
+	controlrpc "github.com/ruziba3vich/smart-house/genprotos/controller_submodule"
 	devicesrpc "github.com/ruziba3vich/smart-house/genprotos/devices_submodule"
 	usersprotos "github.com/ruziba3vich/smart-house/genprotos/submodules/users_submodule/protos"
 
@@ -26,15 +27,16 @@ import (
 
 type (
 	RbmqHandler struct {
-		logger        *log.Logger
-		Msgbroker     *msgbroker.MsgBroker
-		tokenizer     *utils.TokenGenerator
-		usersClient   usersprotos.UsersServiceClient
-		devicesClient devicesrpc.DeviceServiceClient
-		cfg           *config.Config
-		rq            amqp.Queue
-		uq            amqp.Queue
-		dq            amqp.Queue
+		logger           *log.Logger
+		Msgbroker        *msgbroker.MsgBroker
+		tokenizer        *utils.TokenGenerator
+		usersClient      usersprotos.UsersServiceClient
+		devicesClient    devicesrpc.DeviceServiceClient
+		controllerClient controlrpc.ControllerServiceClient
+		cfg              *config.Config
+		rq               amqp.Queue
+		uq               amqp.Queue
+		dq               amqp.Queue
 	}
 )
 
@@ -43,20 +45,22 @@ func NewRbmqHandler(logger *log.Logger,
 	tokenizer *utils.TokenGenerator,
 	usersClient usersprotos.UsersServiceClient,
 	devicesClient devicesrpc.DeviceServiceClient,
+	controllerClient controlrpc.ControllerServiceClient,
 	cfg *config.Config,
 	rq amqp.Queue,
 	uq amqp.Queue,
 	dq amqp.Queue) *RbmqHandler {
 	return &RbmqHandler{
-		logger:        logger,
-		Msgbroker:     msgbroker,
-		usersClient:   usersClient,
-		devicesClient: devicesClient,
-		tokenizer:     tokenizer,
-		cfg:           cfg,
-		rq:            rq,
-		uq:            uq,
-		dq:            dq,
+		logger:           logger,
+		Msgbroker:        msgbroker,
+		usersClient:      usersClient,
+		devicesClient:    devicesClient,
+		controllerClient: controllerClient,
+		tokenizer:        tokenizer,
+		cfg:              cfg,
+		rq:               rq,
+		uq:               uq,
+		dq:               dq,
 	}
 }
 
@@ -69,17 +73,6 @@ func NewRbmqHandler(logger *log.Logger,
 // @description Enter the token in the format `Bearer {token}`
 // @host localhost:7777
 // @BasePath /
-
-// LoginUser godoc
-// @Summary Login
-// @Description Login an existing user
-// @Tags auth
-// @Accept json
-// @Produce json
-// @Param body body usersprotos.LoginRequest true "User login information"
-// @Success 201 {object} models.UserResponse
-// @Failure 500 {object} models.ErrorResponse
-// @Router /users/login [post]
 
 // LoginUser godoc
 // @Summary Login
@@ -423,6 +416,106 @@ func (r *RbmqHandler) GetAllDevices(c *gin.Context) {
 	if err != nil {
 		r.logger.Println("ERROR FROM SERVER: ", err)
 		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// @Summary Turn on a device
+// @Description Turn on a device by ID
+// @Accept json
+// @Produce json
+// @Param request body controlrpc.DeviceRequest true "Device Request"
+// @Success 200 {object} controlrpc.DeviceResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /devices/on [post]
+func (r *RbmqHandler) TurnDeviceOn(c *gin.Context) {
+	var req controlrpc.DeviceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		r.logger.Println("ERROR WHILE BINDING DATA: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	response, err := r.controllerClient.TurnDeviceOn(context.Background(), &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// @Summary Turn off a device
+// @Description Turn off a device by ID
+// @Accept json
+// @Produce json
+// @Param request body controlrpc.DeviceRequest true "Device Request"
+// @Success 200 {object} controlrpc.DeviceResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /devices/off [post]
+func (r *RbmqHandler) TurnDeviceOff(c *gin.Context) {
+	var req controlrpc.DeviceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		r.logger.Println("ERROR WHILE BINDING DATA: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	response, err := r.controllerClient.TurnDeviceOff(context.Background(), &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// @Summary Add user to house
+// @Description Add a user to a house by IDs
+// @Accept json
+// @Produce json
+// @Param request body controlrpc.UserRequest true "User Request"
+// @Success 200 {object} controlrpc.HouseResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users/add [post]
+func (r *RbmqHandler) AddUserToHouse(c *gin.Context) {
+	var req controlrpc.UserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		r.logger.Println("ERROR WHILE BINDING DATA: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	response, err := r.controllerClient.AddUserToHouse(context.Background(), &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// @Summary Remove user from house
+// @Description Remove a user from a house by IDs
+// @Accept json
+// @Produce json
+// @Param request body controlrpc.UserRequest true "User Request"
+// @Success 200 {object} controlrpc.HouseResponse
+// @Failure 400 {object} gin.H
+// @Failure 500 {object} gin.H
+// @Router /users/remove [post]
+func (r *RbmqHandler) RemoveUserFromHouse(c *gin.Context) {
+	var req controlrpc.UserRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		r.logger.Println("ERROR WHILE BINDING DATA: ", err)
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	response, err := r.controllerClient.RemoveUserFromHouse(context.Background(), &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, response)

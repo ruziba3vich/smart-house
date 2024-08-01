@@ -16,3 +16,6 @@
 [submodule "CONTROL/controller_submodule"]
 	path = CONTROL/controller_submodule
 	url = https://github.com/ruziba3vich/controller_submodule.git
+[submodule "GATEWAY/controller_submodule"]
+	path = GATEWAY/controller_submodule
+	url = https://github.com/ruziba3vich/controller_submodule.git
