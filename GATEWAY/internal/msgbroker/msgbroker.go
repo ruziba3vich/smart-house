@@ -30,11 +30,11 @@ func NewRPCClient(ch *amqp.Channel, timeout time.Duration, Registration <-chan a
 	}, nil
 }
 
-func (m *MsgBroker) PublishToQueue(messages <-chan amqp.Delivery, body []byte, q amqp.Queue, replyToQueue, contentType string) ([]byte, error) {
+func (m *MsgBroker) PublishToQueue(messages <-chan amqp.Delivery, body []byte, q amqp.Queue, replyToQueue, contentType string) error {
 	corrId := uuid.New().String()
 	fmt.Println("Generated a new CorrelationId:", corrId)
 
-	err := m.ch.Publish(
+	return m.ch.Publish(
 		"",     // exchange
 		q.Name, // routing key
 		false,  // mandatory
@@ -46,21 +46,4 @@ func (m *MsgBroker) PublishToQueue(messages <-chan amqp.Delivery, body []byte, q
 			Body:          body,
 		},
 	)
-	if err != nil {
-		return nil, err
-	}
-
-	for {
-		select {
-		case d := <-messages:
-			fmt.Println("Received message with CorrelationId:", d.CorrelationId)
-			if corrId == d.CorrelationId {
-				return d.Body, nil
-			}
-		case <-m.timeoutCh:
-			return nil, context.DeadlineExceeded
-		case <-m.ctx.Done():
-			return nil, m.ctx.Err()
-		}
-	}
 }

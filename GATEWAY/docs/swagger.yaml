@@ -61,18 +61,17 @@ paths:
       summary: Update
       tags:
       - users
-  /users/delete:
+  /users/delete/{id}:
     delete:
       consumes:
       - application/json
       description: delete an existing user
       parameters:
-      - description: User deletion information
-        in: body
-        name: body
+      - description: User ID
+        in: path
+        name: id
         required: true
-        schema:
-          $ref: '#/definitions/models.User'
+        type: string
       produces:
       - application/json
       responses:

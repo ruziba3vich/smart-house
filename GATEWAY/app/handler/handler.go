@@ -19,43 +19,34 @@ import (
 
 type (
 	RbmqHandler struct {
-		logger    *log.Logger
-		Msgbroker *msgbroker.MsgBroker
-		tokenizer *utils.TokenGenerator
-		cfg       *config.Config
-		rq        amqp.Queue
-		uq        amqp.Queue
-		dq        amqp.Queue
-	}
-
-	GrpcHandler struct {
 		logger      *log.Logger
+		Msgbroker   *msgbroker.MsgBroker
+		tokenizer   *utils.TokenGenerator
 		usersClient usersprotos.UsersServiceClient
+		cfg         *config.Config
+		rq          amqp.Queue
+		uq          amqp.Queue
+		dq          amqp.Queue
 	}
 )
 
 func NewRbmqHandler(logger *log.Logger,
 	msgbroker *msgbroker.MsgBroker,
 	tokenizer *utils.TokenGenerator,
+	usersClient usersprotos.UsersServiceClient,
 	cfg *config.Config,
 	rq amqp.Queue,
 	uq amqp.Queue,
 	dq amqp.Queue) *RbmqHandler {
 	return &RbmqHandler{
-		logger:    logger,
-		Msgbroker: msgbroker,
-		tokenizer: tokenizer,
-		cfg:       cfg,
-		rq:        rq,
-		uq:        uq,
-		dq:        dq,
-	}
-}
-
-func NewGrpcHandler(logger *log.Logger, usersClient usersprotos.UsersServiceClient) *GrpcHandler {
-	return &GrpcHandler{
 		logger:      logger,
+		Msgbroker:   msgbroker,
 		usersClient: usersClient,
+		tokenizer:   tokenizer,
+		cfg:         cfg,
+		rq:          rq,
+		uq:          uq,
+		dq:          dq,
 	}
 }
 
@@ -85,13 +76,21 @@ func (r *RbmqHandler) RegisterUser(c *gin.Context) {
 		return
 	}
 
-	response, err := r.Msgbroker.PublishToQueue(r.Msgbroker.Registration, body, r.rq, "create_reply", r.cfg.ContentType)
+	err = r.Msgbroker.PublishToQueue(r.Msgbroker.Registration, body, r.rq, "create_reply", r.cfg.ContentType)
 	if err != nil {
 		r.logger.Println("ERROR HAS BEEN RETURNED FROM THE SERVER", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"err": err})
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, gin.H{"response": string(response)})
+	user, err := r.usersClient.GetByEmail(c, &usersprotos.GetByFieldRequest{
+		GetByField: req.Email,
+	})
+	if err != nil {
+		r.logger.Println("ERROR HAS BEEN RETURNED FROM THE SERVER", err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"err": err})
+		return
+	}
+	c.IndentedJSON(http.StatusCreated, gin.H{"response": user})
 }
 
 // UpdateUser godoc
@@ -128,13 +127,21 @@ func (r *RbmqHandler) UpdateUser(c *gin.Context) {
 		return
 	}
 
-	response, err := r.Msgbroker.PublishToQueue(r.Msgbroker.Updates, body, r.uq, "update_reply", r.cfg.ContentType)
+	r.Msgbroker.PublishToQueue(r.Msgbroker.Updates, body, r.uq, "update_reply", r.cfg.ContentType)
+	// if err != nil {
+	// 	r.logger.Println("ERROR HAS BEEN RETURNED FROM THE SERVER", err.Error())
+	// 	c.IndentedJSON(http.StatusInternalServerError, gin.H{"err": err})
+	// 	return
+	// }
+	user, err := r.usersClient.GetById(c, &usersprotos.GetByFieldRequest{
+		GetByField: req.Id.Hex(),
+	})
 	if err != nil {
 		r.logger.Println("ERROR HAS BEEN RETURNED FROM THE SERVER", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"err": err})
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, gin.H{"response": string(response)})
+	c.IndentedJSON(http.StatusOK, gin.H{"response": user})
 }
 
 // DeleteUserById godoc
@@ -143,12 +150,12 @@ func (r *RbmqHandler) UpdateUser(c *gin.Context) {
 // @Tags users
 // @Accept json
 // @Produce json
-// @Param body body models.User true "User deletion information"
+// @Param id path string true "User ID"
 // @Security ApiKeyAuth
 // @Success 201 {object} string
 // @Failure 400 {object} string
 // @Failure 500 {object} string
-// @Router /users/delete [delete]
+// @Router /users/delete/{id} [delete]
 func (r *RbmqHandler) DeleteUserById(c *gin.Context) {
 	req := models.DeleteUserRequest{
 		UserId: c.Param("id"),
@@ -161,13 +168,47 @@ func (r *RbmqHandler) DeleteUserById(c *gin.Context) {
 		return
 	}
 
-	response, err := r.Msgbroker.PublishToQueue(r.Msgbroker.Deletes, body, r.dq, "delete_reply", r.cfg.ContentType)
+	r.Msgbroker.PublishToQueue(r.Msgbroker.Deletes, body, r.dq, "delete_reply", r.cfg.ContentType)
+	// if err != nil {
+	// 	r.logger.Println("ERROR HAS BEEN RETURNED FROM THE SERVER", err.Error())
+	// 	c.IndentedJSON(http.StatusInternalServerError, gin.H{"err": err})
+	// 	return
+	// }
+	user, err := r.usersClient.GetById(c, &usersprotos.GetByFieldRequest{
+		GetByField: req.UserId,
+	})
 	if err != nil {
 		r.logger.Println("ERROR HAS BEEN RETURNED FROM THE SERVER", err.Error())
 		c.IndentedJSON(http.StatusInternalServerError, gin.H{"err": err})
 		return
 	}
-	c.IndentedJSON(http.StatusCreated, gin.H{"response": string(response)})
+	c.IndentedJSON(http.StatusOK, gin.H{"response": user})
+}
+
+// GetAllUsers godoc
+// @Summary Get all users
+// @Description Retrieve all users
+// @Tags users
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} gin.H{"response": usersprotos.GetAllUsersResponse}
+// @Failure 500 {object} gin.H{"error": string}
+// @Router /users [get]
+func (g *RbmqHandler) GetAllUsers(c *gin.Context) {
+	var req usersprotos.GetAllUsersRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		g.logger.Println("ERROR WHILE BINDING DATA :", err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	response, err := g.usersClient.GetAllUsers(c, &req)
+	if err != nil {
+		g.logger.Println("ERROR RETURNED FROM THE SERVER :", err.Error())
+		c.IndentedJSON(http.StatusInternalServerError, gin.H{"error": err})
+		return
+	}
+	c.IndentedJSON(http.StatusOK, response.Users)
 }
 
 /*

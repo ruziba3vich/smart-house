@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/users/delete": {
+        "/users/delete/{id}": {
             "delete": {
                 "security": [
                     {
@@ -35,13 +35,11 @@ const docTemplate = `{
                 "summary": "Delete",
                 "parameters": [
                     {
-                        "description": "User deletion information",
-                        "name": "body",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/models.User"
-                        }
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
                     }
                 ],
                 "responses": {

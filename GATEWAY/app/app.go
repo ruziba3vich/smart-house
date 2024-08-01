@@ -11,14 +11,12 @@ import (
 type (
 	APP struct {
 		rbmqHandler *handler.RbmqHandler
-		grpcHandler *handler.GrpcHandler
 	}
 )
 
-func New(rbmqHandler *handler.RbmqHandler, grpcHandler *handler.GrpcHandler) *APP {
+func New(rbmqHandler *handler.RbmqHandler) *APP {
 	return &APP{
 		rbmqHandler: rbmqHandler,
-		grpcHandler: grpcHandler,
 	}
 }
 
@@ -30,7 +28,7 @@ func (a *APP) RUN(cfg *config.Config) error {
 	router.POST("/users/register", a.rbmqHandler.RegisterUser)
 	router.PUT("/users/:id", a.rbmqHandler.UpdateUser)
 	router.DELETE("/users/delete/:id", a.rbmqHandler.DeleteUserById)
-	router.GET("/users/", a.grpcHandler.GetAllUsers)
+	// router.GET("/users/", a.rb.GetAllUsers)
 
 	return router.Run(cfg.Port)
 }

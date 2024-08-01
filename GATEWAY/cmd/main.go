@@ -67,8 +67,7 @@ func main() {
 	}
 
 	app := app.New(
-		handler.NewRbmqHandler(logger, msgBroker, utils.NewTokenGenerator(config), config, rq, uq, dq),
-		handler.NewGrpcHandler(logger, usersprotos.NewUsersServiceClient(gconn)),
+		handler.NewRbmqHandler(logger, msgBroker, utils.NewTokenGenerator(config), usersprotos.NewUsersServiceClient(gconn), config, rq, uq, dq),
 	)
 	if err := app.RUN(config); err != nil {
 		logger.Fatalf("Application error: %v", err)
