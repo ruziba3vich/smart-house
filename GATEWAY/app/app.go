@@ -28,7 +28,7 @@ func (a *APP) RUN(cfg *config.Config) error {
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	router.POST("/users/register", a.rbmqHandler.RegisterUser)
-	router.POST("/users/update/:id", a.rbmqHandler.UpdateUser)
+	router.PUT("/users/:id", a.rbmqHandler.UpdateUser)
 	router.DELETE("/users/delete/:id", a.rbmqHandler.DeleteUserById)
 	router.GET("/users/", a.grpcHandler.GetAllUsers)
 

@@ -7,4 +7,4 @@ generate-rpc:
 	submodules/users_submodule/protos/users.proto
 
 swagg:
-	swag init -g app/handler/user/handler.go
+	swag init -g app/handler/handler.go

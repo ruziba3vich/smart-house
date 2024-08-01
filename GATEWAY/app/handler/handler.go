@@ -94,6 +94,19 @@ func (r *RbmqHandler) RegisterUser(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, gin.H{"response": string(response)})
 }
 
+// UpdateUser godoc
+// @Summary Update
+// @Description Update existing user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param body body models.User true "User update information"
+// @Security ApiKeyAuth
+// @Success 201 {object} string
+// @Failure 400 {object} string
+// @Failure 500 {object} string
+// @Router /users/{id} [put]
 func (r *RbmqHandler) UpdateUser(c *gin.Context) {
 	var req models.User
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -124,6 +137,18 @@ func (r *RbmqHandler) UpdateUser(c *gin.Context) {
 	c.IndentedJSON(http.StatusCreated, gin.H{"response": string(response)})
 }
 
+// DeleteUserById godoc
+// @Summary Delete
+// @Description delete an existing user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param body body models.User true "User deletion information"
+// @Security ApiKeyAuth
+// @Success 201 {object} string
+// @Failure 400 {object} string
+// @Failure 500 {object} string
+// @Router /users/delete [delete]
 func (r *RbmqHandler) DeleteUserById(c *gin.Context) {
 	req := models.DeleteUserRequest{
 		UserId: c.Param("id"),
