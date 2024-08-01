@@ -10,6 +10,7 @@ import (
 	"github.com/ruziba3vich/smart-house/app"
 	"github.com/ruziba3vich/smart-house/app/handler"
 
+	devicesrpc "github.com/ruziba3vich/smart-house/genprotos/devices_submodule"
 	usersprotos "github.com/ruziba3vich/smart-house/genprotos/submodules/users_submodule/protos"
 	"github.com/ruziba3vich/smart-house/internal/config"
 	"github.com/ruziba3vich/smart-house/internal/msgbroker"
@@ -34,11 +35,6 @@ func main() {
 		logger.Fatalf("Error connecting to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
-
-	gconn, err := grpc.NewClient("localhost:7000", grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		logger.Fatal(err)
-	}
 
 	ch, err := conn.Channel()
 	if err != nil {
@@ -66,8 +62,25 @@ func main() {
 		logger.Fatalf("Error creating RPC client: %v", err)
 	}
 
+	usersConn, err := grpc.Dial("localhost:7000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Fatalf("Failed to connect to users service: %v", err)
+	}
+	defer usersConn.Close()
+
+	devicesConn, err := grpc.Dial("localhost:8000", grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		logger.Fatalf("Failed to connect to devices service: %v", err)
+	}
+	defer devicesConn.Close()
+
+	usersClient := usersprotos.NewUsersServiceClient(usersConn)
+	devicesClient := devicesrpc.NewDeviceServiceClient(devicesConn)
+
+	
+
 	app := app.New(
-		handler.NewRbmqHandler(logger, msgBroker, utils.NewTokenGenerator(config), usersprotos.NewUsersServiceClient(gconn), config, rq, uq, dq),
+		handler.NewRbmqHandler(logger, msgBroker, utils.NewTokenGenerator(config), usersClient, devicesClient, config, rq, uq, dq),
 	)
 	if err := app.RUN(config, utils.NewTokenGenerator(config)); err != nil {
 		logger.Fatalf("Application error: %v", err)

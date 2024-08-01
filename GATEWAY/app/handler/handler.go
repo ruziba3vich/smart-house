@@ -6,12 +6,15 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/k0kubun/pp"
 	amqp "github.com/rabbitmq/amqp091-go"
+	devicesrpc "github.com/ruziba3vich/smart-house/genprotos/devices_submodule"
 	usersprotos "github.com/ruziba3vich/smart-house/genprotos/submodules/users_submodule/protos"
+
 	"github.com/ruziba3vich/smart-house/internal/config"
 	models "github.com/ruziba3vich/smart-house/internal/modules"
 	"github.com/ruziba3vich/smart-house/internal/msgbroker"
@@ -23,14 +26,15 @@ import (
 
 type (
 	RbmqHandler struct {
-		logger      *log.Logger
-		Msgbroker   *msgbroker.MsgBroker
-		tokenizer   *utils.TokenGenerator
-		usersClient usersprotos.UsersServiceClient
-		cfg         *config.Config
-		rq          amqp.Queue
-		uq          amqp.Queue
-		dq          amqp.Queue
+		logger        *log.Logger
+		Msgbroker     *msgbroker.MsgBroker
+		tokenizer     *utils.TokenGenerator
+		usersClient   usersprotos.UsersServiceClient
+		devicesClient devicesrpc.DeviceServiceClient
+		cfg           *config.Config
+		rq            amqp.Queue
+		uq            amqp.Queue
+		dq            amqp.Queue
 	}
 )
 
@@ -38,19 +42,21 @@ func NewRbmqHandler(logger *log.Logger,
 	msgbroker *msgbroker.MsgBroker,
 	tokenizer *utils.TokenGenerator,
 	usersClient usersprotos.UsersServiceClient,
+	devicesClient devicesrpc.DeviceServiceClient,
 	cfg *config.Config,
 	rq amqp.Queue,
 	uq amqp.Queue,
 	dq amqp.Queue) *RbmqHandler {
 	return &RbmqHandler{
-		logger:      logger,
-		Msgbroker:   msgbroker,
-		usersClient: usersClient,
-		tokenizer:   tokenizer,
-		cfg:         cfg,
-		rq:          rq,
-		uq:          uq,
-		dq:          dq,
+		logger:        logger,
+		Msgbroker:     msgbroker,
+		usersClient:   usersClient,
+		devicesClient: devicesClient,
+		tokenizer:     tokenizer,
+		cfg:           cfg,
+		rq:            rq,
+		uq:            uq,
+		dq:            dq,
 	}
 }
 
@@ -296,4 +302,128 @@ func (r *RbmqHandler) checkIfUserExists(ctx context.Context, req *models.User) (
 		return true, fmt.Errorf("user with username %s already exists", req.Username)
 	}
 	return false, nil
+}
+
+// CreateDevice godoc
+// @Summary Create a new device
+// @Description Create a new device
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Param body body devicesprotos.CreateDeviceRequest true "Device creation information"
+// @Success 201 {object} devicesprotos.CreateDeviceResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /devices [post]
+func (r *RbmqHandler) CreateDevice(c *gin.Context) {
+	var req devicesrpc.CreateDeviceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		r.logger.Println("ERROR WHILE BINDING DATA: ", err)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	response, err := r.devicesClient.CreateDevice(c, &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, response)
+}
+
+// UpdateDevice godoc
+// @Summary Update an existing device
+// @Description Update an existing device
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Param id path string true "Device ID"
+// @Param body body devicesprotos.UpdateDeviceRequest true "Device update information"
+// @Success 200 {object} devicesprotos.UpdateDeviceResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /devices/{id} [put]
+func (r *RbmqHandler) UpdateDevice(c *gin.Context) {
+	var req devicesrpc.UpdateDeviceRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		r.logger.Println("ERROR WHILE BINDING DATA: ", err)
+		c.JSON(http.StatusBadRequest, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	req.Device.Id = c.Param("id")
+	response, err := r.devicesClient.UpdateDevice(c, &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetDevice godoc
+// @Summary Get a device by ID
+// @Description Retrieve a device by ID
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Param id path string true "Device ID"
+// @Success 200 {object} devicesprotos.GetDeviceResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /devices/{id} [get]
+func (r *RbmqHandler) GetDevice(c *gin.Context) {
+	req := devicesrpc.GetDeviceRequest{Id: c.Param("id")}
+	response, err := r.devicesClient.GetDevice(c, &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// DeleteDevice godoc
+// @Summary Delete a device by ID
+// @Description Delete a device by ID
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Param id path string true "Device ID"
+// @Success 200 {object} devicesprotos.DeleteDeviceResponse
+// @Failure 400 {object} models.ErrorResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /devices/{id} [delete]
+func (r *RbmqHandler) DeleteDevice(c *gin.Context) {
+	req := devicesrpc.DeleteDeviceRequest{Id: c.Param("id")}
+	response, err := r.devicesClient.DeleteDevice(c, &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
+}
+
+// GetAllDevices godoc
+// @Summary Get all devices
+// @Description Retrieve all devices with pagination
+// @Tags devices
+// @Accept json
+// @Produce json
+// @Param page query int true "Page number"
+// @Param limit query int true "Items per page"
+// @Success 200 {object} devicesprotos.GetAllDevicesResponse
+// @Failure 500 {object} models.ErrorResponse
+// @Router /devices [get]
+func (r *RbmqHandler) GetAllDevices(c *gin.Context) {
+	page, _ := strconv.Atoi(c.Query("page"))
+	limit, _ := strconv.Atoi(c.Query("limit"))
+	req := devicesrpc.GetAllDevicesRequest{Page: int32(page), Limit: int32(limit)}
+	response, err := r.devicesClient.GetAllDevices(c, &req)
+	if err != nil {
+		r.logger.Println("ERROR FROM SERVER: ", err)
+		c.JSON(http.StatusInternalServerError, models.ErrorResponse{Error: err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, response)
 }

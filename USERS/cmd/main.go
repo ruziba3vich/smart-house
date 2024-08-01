@@ -54,7 +54,7 @@ func main() {
 	}
 	defer ch.Close()
 
-	grpcserver := grpcapp.New(service)
+	grpcserver := grpcapp.NewUsersApp(service)
 
 	regQueue, err := getQueue(ch, "create")
 	if err != nil {

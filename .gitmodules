@@ -7,3 +7,9 @@
 [submodule "DEVICES/devices_submodule"]
 	path = DEVICES/devices_submodule
 	url = https://github.com/ruziba3vich/devices_submodule.git
+[submodule "USERS/devices_submodule"]
+	path = USERS/devices_submodule
+	url = https://github.com/ruziba3vich/devices_submodule.git
+[submodule "GATEWAY/devices_submodule"]
+	path = GATEWAY/devices_submodule
+	url = https://github.com/ruziba3vich/devices_submodule.git

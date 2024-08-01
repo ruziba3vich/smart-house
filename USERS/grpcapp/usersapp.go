@@ -15,7 +15,7 @@ type (
 	}
 )
 
-func New(service genprotos.UsersServiceServer) *GRPCApp {
+func NewUsersApp(service genprotos.UsersServiceServer) *GRPCApp {
 	return &GRPCApp{
 		service: service,
 	}

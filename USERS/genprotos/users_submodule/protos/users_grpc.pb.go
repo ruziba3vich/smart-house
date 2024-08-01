@@ -4,7 +4,7 @@
 // - protoc             v5.27.2
 // source: users_submodule/protos/users.proto
 
-package genprotos
+package devicesrpc
 
 import (
 	context "context"

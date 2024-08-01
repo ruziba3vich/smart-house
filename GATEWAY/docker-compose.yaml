@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  users:
+    build:
+      context: .
+      dockerfile: dockerfile.users
+    ports:
+      - "7000:7000"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_DB=users_db
+      - COLLECTION=users
+      - PORT=7000
+      - REDIS_URI=redis:6379
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - PROTOCOL=tcp
+    depends_on:
+      - mongo
+      - redis
+      - rabbitmq
+
+  devices:
+    build:
+      context: .
+      dockerfile: dockerfile.devices
+    ports:
+      - "7001:7001"
+    environment:
+      - MONGO_URI=mongodb://mongo:27017
+      - MONGO_DB=devices_db
+      - COLLECTION=devices
+      - PORT=7001
+      - REDIS_URI=redis:6379
+      - RABBITMQ_URI=amqp://rabbitmq:5672
+      - PROTOCOL=tcp
+    depends_on:
+      - mongo
+      - redis
+      - rabbitmq
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+
+volumes:
+  mongo-data:
