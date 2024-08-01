@@ -1,0 +1,59 @@
+definitions:
+  models.Profile:
+    properties:
+      address:
+        type: string
+      name:
+        type: string
+    type: object
+  models.User:
+    properties:
+      deleted:
+        type: boolean
+      email:
+        type: string
+      id:
+        type: string
+      password:
+        type: string
+      profile:
+        $ref: '#/definitions/models.Profile'
+      username:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /users/register:
+    post:
+      consumes:
+      - application/json
+      description: Register a new user
+      parameters:
+      - description: User registration information
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            type: string
+      security:
+      - ApiKeyAuth: []
+      summary: Register
+      tags:
+      - auth
+swagger: "2.0"

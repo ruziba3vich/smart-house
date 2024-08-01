@@ -6,16 +6,15 @@ import (
 	"log"
 	"os"
 	"sync"
-	"time"
 
 	"github.com/go-redis/redis/v8"
 	amqp "github.com/rabbitmq/amqp091-go"
 	"github.com/ruziba3vich/users/grpcapp"
 	"github.com/ruziba3vich/users/internal/config"
+	"github.com/ruziba3vich/users/internal/msgbroker"
 	"github.com/ruziba3vich/users/internal/redisservice"
 	"github.com/ruziba3vich/users/internal/service"
 	"github.com/ruziba3vich/users/internal/storage"
-	"github.com/ruziba3vich/users/msgbroker"
 )
 
 func main() {
@@ -25,33 +24,33 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
-	defer cancel()
+
+	ctx := context.Background()
+	// defer cancel()
 
 	db, err := storage.ConnectDB(cfg, ctx)
 	if err != nil {
-		logger.Println(err)
+		logger.Fatal(err)
 	}
 
 	hash := md5.New()
 
 	redisService := redisservice.New(redis.NewClient(&redis.Options{
 		Addr: cfg.GetRedisURI(),
-		DB:   0, // use default DB
-	}),
-		logger,
-	)
+		DB:   0,
+	}), logger)
+
 	service := service.New(storage.NewStorage(db, logger, hash, cfg), redisService, logger)
 
 	conn, err := amqp.Dial(cfg.GetRabbitMqURI())
 	if err != nil {
-		log.Fatalf("Failed to connect to RabbitMQ: %v", err)
+		logger.Fatalf("Failed to connect to RabbitMQ: %v", err)
 	}
 	defer conn.Close()
 
 	ch, err := conn.Channel()
 	if err != nil {
-		log.Fatalf("Failed to open a channel: %v", err)
+		logger.Fatalf("Failed to open a channel: %v", err)
 	}
 	defer ch.Close()
 
@@ -75,20 +74,22 @@ func main() {
 		logger.Fatal(err)
 	}
 
-	delQUeue, err := getQueue(ch, "delete")
+	delQueue, err := getQueue(ch, "delete")
 	if err != nil {
 		logger.Fatal(err)
 	}
-	delMsgs, err := getMessageQueue(ch, delQUeue)
+	delMsgs, err := getMessageQueue(ch, delQueue)
 	if err != nil {
 		logger.Fatal(err)
 	}
 
 	msgBroker := msgbroker.New(service, ch, logger, regMsgs, updMsgs, delMsgs, &sync.WaitGroup{}, 3)
 
+	// Start gRPC server in a separate goroutine
 	go func() {
 		logger.Fatal(grpcserver.RUN(cfg, logger))
 	}()
+
 	msgBroker.StartToConsume(ctx, "application/json")
 }
 

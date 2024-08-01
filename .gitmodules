@@ -1,3 +1,6 @@
 [submodule "USERS/users_submodule"]
 	path = USERS/users_submodule
 	url = https://github.com/ruziba3vich/users_submodule.git
+[submodule "GATEWAY/submodules/users_submodule"]
+	path = GATEWAY/submodules/users_submodule
+	url = https://github.com/ruziba3vich/users_submodule.git

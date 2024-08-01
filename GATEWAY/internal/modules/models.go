@@ -1,7 +1,7 @@
 package models
 
 import (
-	genprotos "github.com/ruziba3vich/users/genprotos/users_submodule/protos"
+	usersprotos "github.com/ruziba3vich/smart-house/genprotos/submodules/users_submodule/protos"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -31,7 +31,7 @@ type (
 	}
 )
 
-func (u *User) Update(obj *genprotos.UpdateUserReuqest) {
+func (u *User) Update(obj *usersprotos.UpdateUserReuqest) {
 	if len(obj.User.Email) > 0 {
 		u.Email = obj.User.Email
 	}
@@ -46,20 +46,20 @@ func (u *User) Update(obj *genprotos.UpdateUserReuqest) {
 	}
 }
 
-func (p Profile) ToProtoProfile() *genprotos.Profile {
-	return &genprotos.Profile{
+func (p Profile) ToProtoProfile() *usersprotos.Profile {
+	return &usersprotos.Profile{
 		Name:    p.Name,
 		Address: p.Address,
 	}
 }
 
-func (p *Profile) FromProto(obj *genprotos.Profile) {
+func (p *Profile) FromProto(obj *usersprotos.Profile) {
 	p.Name = obj.Name
 	p.Address = obj.Address
 }
 
-func (u *User) ToProtoUser() *genprotos.User {
-	return &genprotos.User{
+func (u *User) ToProtoUser() *usersprotos.User {
+	return &usersprotos.User{
 		UserId:   u.Id.Hex(),
 		Username: u.Username,
 		Email:    u.Email,
@@ -69,7 +69,7 @@ func (u *User) ToProtoUser() *genprotos.User {
 	}
 }
 
-func (u *User) FromProto(data *genprotos.CreateUserReuest) {
+func (u *User) FromProto(data *usersprotos.CreateUserReuest) {
 	u.Email = data.Email
 	u.Password = data.Password
 	u.Username = data.Username
@@ -77,25 +77,12 @@ func (u *User) FromProto(data *genprotos.CreateUserReuest) {
 	u.Profile.FromProto(data.Profile)
 }
 
-func (u *User) ToCreateUserRequest() *genprotos.CreateUserReuest {
-	return &genprotos.CreateUserReuest{
+func (u *User) ToCreateUserRequest() *usersprotos.CreateUserReuest {
+	return &usersprotos.CreateUserReuest{
 		Username: u.Username,
 		Email:    u.Email,
 		Password: u.Password,
 		Profile:  u.Profile.ToProtoProfile(),
 		Deleted:  u.Deleted,
-	}
-}
-
-func (u *User) ToUpdateUserRequest() *genprotos.UpdateUserReuqest {
-	return &genprotos.UpdateUserReuqest{
-		User: &genprotos.User{
-			UserId:   u.Id.Hex(),
-			Username: u.Username,
-			Email:    u.Email,
-			Password: u.Password,
-			Profile:  u.Profile.ToProtoProfile(),
-			Deleted:  u.Deleted,
-		},
 	}
 }
